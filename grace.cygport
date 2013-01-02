@@ -1,0 +1,56 @@
+NAME="grace"
+VERSION=5.1.23
+RELEASE=1
+CATEGORY="Math"
+SUMMARY="WYSIWYG 2D plotting tool"
+DESCRIPTION="Grace is a WYSIWYG tool to make two-dimensional plots of numerical
+data.  Its capabilities are roughly similar to GUI-based programs like
+Sigmaplot or Microcal Origin plus script-based tools like Gnuplot or Genplot.
+Its strength lies in the fact that it combines the convenience of a graphical
+user interface with the power of a scripting language which enables it to do
+sophisticated calculations or perform automated tasks."
+REQUIRES="nedit"
+HOMEPAGE="http://plasma-gate.weizmann.ac.il/Grace/"
+SRC_URI="ftp://plasma-gate.weizmann.ac.il/pub/grace/src/grace${PV[1]}/${P}.tar.gz"
+PATCH_URI="
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/gracerc.diff
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/tmpnam_to_mkstemp.diff
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/fftw3.diff
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/netcdf-build-fix.diff
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/binary_nostrip.diff
+	http://patch-tracker.debian.org/patch/series/dl/grace/1:5.1.23-1/source-hardening.diff
+	5.1.23-bitmaps-xpm.patch
+	5.1.23-cygwin-ld.patch
+"
+
+CPPFLAGS+=" -I/usr/include/tirpc"
+
+src_compile() {
+	lndirs
+	cd ${B}
+	cygconf \
+		--enable-editres \
+		--enable-grace-home=/usr/share/${NAME} \
+		--with-editor=/usr/bin/nedit \
+		--with-f77=${F77} \
+		--with-printcmd="lpr" \
+		--without-bundled-t1lib
+	cygmake
+}
+
+src_install() {
+	cd ${B}
+	cyginstall
+
+	dodir /usr/share/doc/${NAME} /usr/share/man/man1
+
+	pushd ${D}/usr/share/${NAME}
+	mv {bin,include,lib}/ ${D}/usr/
+	mv doc/*.1 ${D}/usr/share/man/man1/
+	mv doc/* ${D}/usr/share/doc/${NAME}/
+	rmdir doc
+	dosym ../doc/${NAME} /usr/share/${NAME}/doc
+
+	make_desktop_entry xmgrace Grace xmgrace "Education;Science;DataVisualization;Motif"
+	newicon ${S}/src/bitmaps.h xmgrace.xpm
+}
