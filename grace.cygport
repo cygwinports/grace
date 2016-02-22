@@ -1,5 +1,5 @@
 NAME="grace"
-VERSION=5.1.24
+VERSION=5.1.25
 RELEASE=1
 CATEGORY="Math"
 SUMMARY="WYSIWYG 2D plotting tool"
@@ -9,16 +9,36 @@ Sigmaplot or Microcal Origin plus script-based tools like Gnuplot or Genplot.
 Its strength lies in the fact that it combines the convenience of a graphical
 user interface with the power of a scripting language which enables it to do
 sophisticated calculations or perform automated tasks."
-REQUIRES="nedit"
 HOMEPAGE="http://plasma-gate.weizmann.ac.il/Grace/"
-SRC_URI="ftp://plasma-gate.weizmann.ac.il/pub/grace/src/grace${PV[1]}/${P}.tar.gz"
+SRC_URI="
+	ftp://plasma-gate.weizmann.ac.il/pub/grace/src/grace5/grace-${VERSION}.tar.gz
+	mirror://debian/pool/main/g/grace/grace_${VERSION}-1.debian.tar.xz
+"
 PATCH_URI="
+	http://pkgs.fedoraproject.org/cgit/rpms/grace.git/plain/grace-detect-netcdf.diff
 	5.1.23-bitmaps-xpm.patch
 "
 
+PKG_NAMES="grace grace-devel"
+grace_REQUIRES="ghostscript-fonts-std nedit xdg-utils"
+grace_CONTENTS="--exclude=include --exclude=lib usr/"
+grace_devel_REQUIRES=${NAME}
+grace_devel_CONTENTS="usr/include/ usr/lib/ usr/share/grace/include/ usr/share/grace/lib/"
+
 DIFF_EXCLUDES="*.pdf"
 
+CYGPORT_USE_UNSTABLE_API=1
+src_unpack_hook() {
+	cygpatch ../debian/patches/binary_nostrip.diff
+	cygpatch ../debian/patches/fftw3.diff
+	cygpatch ../debian/patches/gracerc.diff
+	cygpatch ../debian/patches/source-hardening.diff
+	sed -i -e 's|-Wl,-z,[^ ]*||g' auxiliary/Makefile
+	cygpatch ../debian/patches/tmpnam_to_mkstemp.diff
+}
+
 CPPFLAGS+=" -I/usr/include/tirpc"
+LIBS+=" -ltirpc"
 
 src_compile() {
 	lndirs
@@ -26,8 +46,10 @@ src_compile() {
 	cygconf \
 		--enable-editres \
 		--enable-grace-home=/usr/share/${NAME} \
-		--with-editor=/usr/bin/nedit \
 		--with-f77=${F77} \
+		--with-editor=nedit \
+		--with-extra-incpath=/usr/include/netcdf \
+		--with-helpviewer="xdg-open %s" \
 		--with-printcmd="lpr" \
 		--without-bundled-t1lib
 	cygmake
@@ -37,14 +59,27 @@ src_install() {
 	cd ${B}
 	cyginstall
 
-	dodir /usr/share/doc/${NAME} /usr/share/man/man1
+	dodir /usr/{bin,include,lib} /usr/share/doc/${NAME} /usr/share/man/man1
 
 	pushd ${D}/usr/share/${NAME}
-	mv {bin,include,lib}/ ${D}/usr/
+
+	for d in bin include lib
+	do
+		pushd $d
+		for f in *
+		do
+			mv $f ${D}/usr/$d/
+			ln -s ../../../$d/${f%.exe} .
+		done
+		popd
+	done
 	mv doc/*.1 ${D}/usr/share/man/man1/
 	mv doc/* ${D}/usr/share/doc/${NAME}/
 	rmdir doc
-	dosym ../doc/${NAME} /usr/share/${NAME}/doc
+	ln -sf ../doc/${NAME} doc
+	rm -fr fonts/type1
+	ln -sf /usr/share/ghostscript/fonts fonts/type1
+	popd
 
 	make_desktop_entry xmgrace Grace xmgrace "Education;Science;DataVisualization;Motif"
 	newicon ${S}/src/bitmaps.h xmgrace.xpm
