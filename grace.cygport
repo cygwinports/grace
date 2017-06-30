@@ -1,6 +1,6 @@
 NAME="grace"
 VERSION=5.1.25
-RELEASE=1
+RELEASE=2
 CATEGORY="Math"
 SUMMARY="WYSIWYG 2D plotting tool"
 DESCRIPTION="Grace is a WYSIWYG tool to make two-dimensional plots of numerical
